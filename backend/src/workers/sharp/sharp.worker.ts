@@ -1,5 +1,4 @@
 import { FileType } from 'picsur-shared/dist/dto/mimes.dto';
-import { setrlimit } from 'posix.js';
 import { Sharp } from 'sharp';
 import {
   SharpWorkerFinishOptions,
@@ -10,6 +9,18 @@ import {
 } from './sharp.message.js';
 import { UniversalSharpIn, UniversalSharpOut } from './universal-sharp.js';
 
+async function trySetMemoryLimit(memoryLimit: number): Promise<void> {
+  try {
+    const posix = await import('posix.js');
+    posix.setrlimit('data', {
+      soft: 1000 * 1000 * memoryLimit,
+      hard: 1000 * 1000 * memoryLimit,
+    });
+  } catch (e) {
+    console.warn('Failed to set memory limit:', e instanceof Error ? e.message : e);
+  }
+}
+
 export class SharpWorker {
   private startTime = 0;
   private sharpi: Sharp | null = null;
@@ -18,7 +29,7 @@ export class SharpWorker {
     this.setup();
   }
 
-  private setup() {
+  private async setup() {
     if (process.send === undefined) {
       return this.purge('This is not a worker process');
     }
@@ -29,14 +40,7 @@ export class SharpWorker {
       return this.purge('MEMORY_LIMIT_MB environment variable is not set');
     }
 
-    try {
-      setrlimit('data', {
-        soft: 1000 * 1000 * memoryLimit,
-        hard: 1000 * 1000 * memoryLimit,
-      });
-    } catch (e) {
-      console.warn('Failed to set memory limit');
-    }
+    await trySetMemoryLimit(memoryLimit);
 
     process.on('message', this.messageHandler.bind(this));
 
