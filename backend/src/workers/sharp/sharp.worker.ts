@@ -10,6 +10,17 @@ import {
 import { UniversalSharpIn, UniversalSharpOut } from './universal-sharp.js';
 
 async function trySetMemoryLimit(memoryLimit: number): Promise<void> {
+  // Skip memory limits in Docker - Docker manages memory via cgroups and
+  // setrlimit conflicts with libvips/glib causing "out of memory" errors
+  try {
+    const { default: isDocker } = await import('is-docker');
+    if (isDocker()) {
+      return;
+    }
+  } catch {
+    // If is-docker fails to load, continue with setrlimit attempt
+  }
+
   try {
     const posix = await import('posix.js');
     posix.setrlimit('data', {
