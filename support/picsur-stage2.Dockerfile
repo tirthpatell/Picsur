@@ -1,7 +1,9 @@
 # This dockerfile than builds the production dependencies and the final image
 
 # Always fetch amd64 image
-FROM ghcr.io/caramelfur/picsur-alpha-stage1:latest AS builder_stage1
+# Change this to your own stage1 image if building a fork
+ARG STAGE1_IMAGE=ghcr.io/caramelfur/picsur-alpha-stage1:latest
+FROM ${STAGE1_IMAGE} AS builder_stage1
 
 # === START VIPS ===
 FROM node:20-alpine AS vips_builder
